@@ -102,7 +102,10 @@ def lm_eval_evaluate(model, tokenizer, tasks: str = None, batch_size: int = 4):
 
 def get_n_params(model):
     """
-    Get the number of training-time and inference-time parameters of the model.
+    Get the number of training-time and inference-time parameters of the model. Assumes the inputted 
+    model is not using weight tying. `training_time` estimates the number of parameters that are used 
+    during training (with weight tying). `inference_time` estimates the number of parameters that are used 
+    during inference (without weight tying).
 
     Args:
         model: The model to be evaluated.
@@ -110,16 +113,7 @@ def get_n_params(model):
     Returns:
         A dictionary with 'training_time' and 'inference_time' parameter counts.
     """
-    # TODO: check this works
-    lm_head_params = 0
-    if (
-        (hasattr(model.config, "tie_weights") and model.config.tie_weights is True)
-        or (
-            hasattr(model.config, "tie_word_embeddings")
-            and model.config.tie_word_embeddings is True
-        )
-    ) and hasattr(model, "lm_head"):
-        lm_head_params = sum(p.numel() for p in model.lm_head.parameters())
+    lm_head_params = sum(p.numel() for p in model.lm_head.parameters()) if hasattr(model, "lm_head") else 0
     total_params = sum(p.numel() for p in model.parameters())
     return {
         "training_time": total_params - lm_head_params,

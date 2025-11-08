@@ -35,6 +35,10 @@ def patch_first_k_layers(
         student_config["copied_teacher_layers"], k, patch_from_last=False
     )
     if student_idx == student_model.config.num_hidden_layers:
+        # Untie weights before returning teacher model to match patched models
+        if hasattr(teacher_model, "lm_head") and hasattr(teacher_model.model, "embed_tokens"):
+            if teacher_model.lm_head.weight is teacher_model.model.embed_tokens.weight:
+                teacher_model.lm_head.weight = torch.nn.Parameter(teacher_model.lm_head.weight.clone())
         return teacher_model
         
     intermediate_model = reload_student_model(
@@ -81,6 +85,10 @@ def patch_last_k_layers(
         student_config["copied_teacher_layers"], k, patch_from_last=True
     )
     if student_idx == 0:
+        # Untie weights before returning teacher model to match patched models
+        if hasattr(teacher_model, "lm_head") and hasattr(teacher_model.model, "embed_tokens"):
+            if teacher_model.lm_head.weight is teacher_model.model.embed_tokens.weight:
+                teacher_model.lm_head.weight = torch.nn.Parameter(teacher_model.lm_head.weight.clone())
         return teacher_model
         
     intermediate_model = reload_student_model(
