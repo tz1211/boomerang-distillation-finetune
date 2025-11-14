@@ -222,3 +222,6 @@ files/
 eval/
 results/
 models/
+stdout_logs/
+error_logs/
+fasrc/
