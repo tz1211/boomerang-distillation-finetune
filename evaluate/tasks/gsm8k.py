@@ -74,7 +74,10 @@ def evaluate_gsm8k(
         # Extract answer from response
         predicted_answer = extract_answer_boxed(response)
         if predicted_answer is not None:
-            predicted_answer = int(predicted_answer)
+            try:
+                predicted_answer = int(predicted_answer)
+            except ValueError: # If the model can't follow instruction and return only a number inside \boxed{}, we treat it as incorrect
+                predicted_answer = None
         
         # Check correctness
         is_correct = False
