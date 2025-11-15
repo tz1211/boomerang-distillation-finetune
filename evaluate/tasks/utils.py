@@ -33,17 +33,35 @@ def extract_number(text: str) -> Optional[float]:
     
     return None
 
-
 def extract_answer_boxed(text: str) -> Optional[str]:
-    """Extract answer from \\boxed{} LaTeX format."""
-    # Look for \boxed{...}
-    boxed_pattern = r"\\boxed\{([^}]+)\}"
-    matches = re.findall(boxed_pattern, text)
-    if matches:
-        return matches[-1].strip()
+    """Extract answer from \\boxed{} LaTeX format, handling nested braces."""
+    # Find all occurrences of \boxed{
+    pattern = r"\\boxed\{"
+    matches = list(re.finditer(pattern, text))
+    
+    if not matches:
+        return None
+    
+    # Start from the last match (most likely the final answer)
+    match = matches[-1]
+    start_pos = match.end()  # Position after \boxed{
+    
+    # Count braces to find the matching closing brace
+    brace_count = 1  # We already have one opening brace from \boxed{
+    pos = start_pos
+    
+    while pos < len(text) and brace_count > 0:
+        if text[pos] == '{':
+            brace_count += 1
+        elif text[pos] == '}':
+            brace_count -= 1
+        pos += 1
+    
+    if brace_count == 0:
+        # Found matching closing brace
+        return text[start_pos:pos-1].strip()  # pos-1 to exclude the closing brace
     
     return None
-
 
 def extract_final_answer(text: str) -> Optional[str]:
     """Extract final answer from text, trying multiple strategies."""
