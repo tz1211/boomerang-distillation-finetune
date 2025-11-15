@@ -11,12 +11,11 @@ import json
 import os
 import shutil
 import tempfile
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
-from transformers import AutoTokenizer
-from vllm import LLM, SamplingParams
+from vllm import LLM
 
 from patching.patch import build_intermediate_model
 from evaluate.system_prompts import SYSTEM_PROMPTS
