@@ -9,27 +9,16 @@ from transformers import AutoTokenizer
 
 def extract_number(text: str) -> Optional[float]:
     """Extract the last number from text, handling various formats."""
-    # Remove commas and other formatting
+    if text is None:
+        return None
+    
     text = text.replace(",", "")
     
-    # Try to find numbers in various formats
-    patterns = [
-        r"-?\d+\.?\d*",  # Standard number
-        r"\$(\d+\.?\d*)",  # Dollar amounts
-        r"(\d+\.?\d*)\s*%",  # Percentages
-    ]
+    # Find all numbers (handles negatives and decimals)
+    matches = re.findall(r"-?\d+\.?\d*", text)
     
-    numbers = []
-    for pattern in patterns:
-        matches = re.findall(pattern, text)
-        if matches:
-            if isinstance(matches[0], tuple):
-                numbers.extend([float(m[0]) if m[0] else None for m in matches])
-            else:
-                numbers.extend([float(m) for m in matches])
-    
-    if numbers:
-        return numbers[-1]  # Return the last number found
+    if matches:
+        return float(matches[-1])  # Return the last number found
     
     return None
 

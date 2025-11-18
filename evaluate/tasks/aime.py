@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.tasks.utils import batch_generate, extract_answer_boxed
+from evaluate.tasks.utils import batch_generate, extract_answer_boxed, extract_number
 
 
 def evaluate_aime(
@@ -69,12 +69,7 @@ def evaluate_aime(
     for i, (response, gt_answer) in enumerate(zip(responses, ground_truth_answers)):
         # Extract answer from response
         predicted_answer = extract_answer_boxed(response)
-        if predicted_answer is not None:
-            try:
-                predicted_answer = predicted_answer.replace(',', '')
-                predicted_answer = int(predicted_answer)
-            except ValueError: # If the model can't follow instruction and return only a number inside \boxed{}, we treat it as incorrect
-                predicted_answer = None
+        predicted_answer = extract_number(predicted_answer)
         
         # Check correctness 
         is_correct = False
