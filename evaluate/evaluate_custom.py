@@ -23,9 +23,6 @@ from evaluate.tasks.gsm8k import evaluate_gsm8k
 from evaluate.tasks.math500 import evaluate_math500
 from evaluate.tasks.aime import evaluate_aime
 from evaluate.tasks.mmlu import evaluate_mmlu
-from evaluate.tasks.gpqa import evaluate_gpqa
-from evaluate.tasks.livecodebench import evaluate_livecodebench
-from evaluate.tasks.ifeval import evaluate_ifeval
 
 
 def to_serializable(obj):
@@ -62,9 +59,6 @@ TASK_EVALUATORS = {
     "math500": evaluate_math500,
     "aime": evaluate_aime,
     "mmlu": evaluate_mmlu,
-    "gpqa": evaluate_gpqa,
-    "livecodebench": evaluate_livecodebench,
-    "ifeval": evaluate_ifeval,
 }
 
 
