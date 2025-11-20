@@ -100,6 +100,17 @@ def normalize_answer(answer: str) -> str:
     return answer.lower()
 
 
+def multiple_choice_num_to_letter(num: int) -> str:
+    """Convert a number to a letter for multiple choice questions."""
+    mapping = {
+        0: "A",
+        1: "B",
+        2: "C",
+        3: "D",
+    }
+    return mapping[num]
+
+
 def batch_generate(
     model: LLM,
     tokenizer: AutoTokenizer,

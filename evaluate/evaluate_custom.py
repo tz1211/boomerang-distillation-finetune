@@ -1,6 +1,6 @@
 """
 Custom evaluation framework without lm_eval_harness.
-Supports: GSM8K, MATH500, AIME, MMLU, GPQA Diamond, LiveCodeBench
+Supports: GSM8K, MATH500, AIME, MMLU
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from evaluate.tasks.aime import evaluate_aime
 from evaluate.tasks.mmlu import evaluate_mmlu
 from evaluate.tasks.gpqa import evaluate_gpqa
 from evaluate.tasks.livecodebench import evaluate_livecodebench
+from evaluate.tasks.ifeval import evaluate_ifeval
 
 
 def to_serializable(obj):
@@ -63,6 +64,7 @@ TASK_EVALUATORS = {
     "mmlu": evaluate_mmlu,
     "gpqa": evaluate_gpqa,
     "livecodebench": evaluate_livecodebench,
+    "ifeval": evaluate_ifeval,
 }
 
 
@@ -232,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         required=True,
-        help="Comma-separated list of tasks: gsm8k,math500,aime,mmlu,gpqa,livecodebench",
+        help="Comma-separated list of tasks: gsm8k,math500,aime,mmlu",
     )
     parser.add_argument(
         "--num_layers_to_patch",

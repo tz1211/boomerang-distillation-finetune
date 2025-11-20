@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.tasks.utils import batch_generate, extract_answer_boxed
+from evaluate.tasks.utils import batch_generate, extract_answer_boxed, multiple_choice_num_to_letter
 
 
 def evaluate_mmlu(
@@ -81,7 +81,7 @@ def evaluate_mmlu(
             for item in dataset:
                 problem = item["question"]
                 choices = item["choices"]
-                correct_answer = item["answer"]
+                correct_answer = multiple_choice_num_to_letter(item["answer"])
                 
                 # Format as multiple choice question
                 input_prompt = f"{problem.strip()}\nA. {choices[0].strip()}\nB. {choices[1].strip()}\nC. {choices[2].strip()}\nD. {choices[3].strip()}\nAnswer:"
