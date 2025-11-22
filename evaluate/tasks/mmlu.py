@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.tasks.utils import batch_generate, extract_answer_boxed, multiple_choice_num_to_letter
+from evaluate.utils.utils import batch_generate, grade_answer, multiple_choice_num_to_letter
 
 
 def evaluate_mmlu(
@@ -105,14 +105,10 @@ def evaluate_mmlu(
             subject_results = []
             
             for i, (response, correct_answer) in enumerate(zip(responses, correct_answers)):
-                # Extract answer choice (A, B, C, or D)
-                predicted_answer = extract_answer_boxed(response)
-                
-                is_correct = predicted_answer == correct_answer
+                is_correct = grade_answer(response, correct_answer, extract=True)
                 if is_correct:
                     subject_correct += 1
                     total_correct += 1
-                
                 total_questions += 1
                 
                 subject_results.append({
@@ -120,7 +116,6 @@ def evaluate_mmlu(
                     "formatted_problem": formatted_problems[i],
                     "ground_truth": correct_answer,
                     "raw_response": response,
-                    "filtered_answer": predicted_answer,
                     "correct": is_correct,
                 })
             

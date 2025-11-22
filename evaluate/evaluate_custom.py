@@ -23,6 +23,8 @@ from evaluate.tasks.gsm8k import evaluate_gsm8k
 from evaluate.tasks.math500 import evaluate_math500
 from evaluate.tasks.aime import evaluate_aime
 from evaluate.tasks.mmlu import evaluate_mmlu
+from evaluate.tasks.gpqa import evaluate_gpqa
+from evaluate.tasks.ifeval import evaluate_ifeval
 
 
 def to_serializable(obj):
@@ -59,6 +61,8 @@ TASK_EVALUATORS = {
     "math500": evaluate_math500,
     "aime": evaluate_aime,
     "mmlu": evaluate_mmlu,
+    "gpqa": evaluate_gpqa,
+    "ifeval": evaluate_ifeval,
 }
 
 
@@ -159,7 +163,7 @@ def main(
         
         try:
             # Get system prompt for this task if enabled
-            task_system_prompt = SYSTEM_PROMPTS.get(task_name) if use_system_prompts else None
+            task_system_prompt = SYSTEM_PROMPTS.get(task_name, None) if use_system_prompts else None
             
             task_results = evaluator_fn(
                 model=llm,

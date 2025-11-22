@@ -1,4 +1,4 @@
-"""GSM8K evaluation - Grade School Math 8K problems."""
+"""IFEval evaluation - Instruction Following Evaluation."""
 
 from typing import Dict, Optional
 
@@ -6,10 +6,10 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.utils.utils import batch_generate, grade_answer
+from evaluate.utils.utils import batch_generate, grade_instruction_following
+from evaluate.utils.instructions_util import IFEvalInputItem
 
-
-def evaluate_gsm8k(
+def evaluate_ifeval(
     model: LLM,
     tokenizer: AutoTokenizer,
     apply_chat_template: bool = True,
@@ -20,7 +20,7 @@ def evaluate_gsm8k(
     log_n_results: int = 100,
 ) -> Dict:
     """
-    Evaluate model on GSM8K dataset.
+    Evaluate model on IFEval dataset (instruction following evaluation).
     
     Args:
         model: The vLLM LLM model
@@ -34,55 +34,54 @@ def evaluate_gsm8k(
     Returns:
         Dictionary with accuracy and detailed results
     """
-    print("Loading GSM8K dataset...")
-    dataset = load_dataset("gsm8k", "main", split="test")
+    print("Loading IFEval dataset...")
+    
+    dataset = load_dataset("google/IFEval", split="train")
     
     if limit:
         dataset = dataset.select(range(min(limit, len(dataset))))
     
-    questions = [item["question"] for item in dataset]
-    ground_truth_answers = [item["answer"] for item in dataset]
+    prompts = []
+    input_items = []  # Store InputItem objects for evaluation
     
-    # Extract numeric answers from ground truth
-    def extract_gt_answer(answer_text: str) -> str:
-        # GSM8K answers are in format "#### 123" or just the number
-        match = answer_text.split("####")
-        if len(match) > 1:
-            return match[-1].strip()
-        return answer_text.strip()
-    
-    gt_answers = [extract_gt_answer(ans).replace(',', '') for ans in ground_truth_answers]
-    
-    print(f"Evaluating on {len(questions)} GSM8K problems...")
+    for item in dataset:
+        prompt = item.get("prompt", "")
+        instruction_id_list = item.get("instruction_id_list", [])
+        kwargs_list = item.get("kwargs", [])
+        
+        # Create InputItem for grade_instruction_following
+        input_item = IFEvalInputItem(prompt, instruction_id_list, kwargs_list)
+        prompts.append(prompt)
+        input_items.append(input_item)
     
     # Generate responses
-    formatted_problems, responses = batch_generate(
+    formatted_prompts, responses = batch_generate(
         model=model,
         tokenizer=tokenizer,
-        prompts=questions,
+        prompts=prompts,
         apply_chat_template=apply_chat_template,
         max_new_tokens=max_new_tokens,
         temperature=temperature,
         system_prompt=system_prompt,
     )
     
-    # Evaluate answers
+    # Evaluate responses using grade_instruction_following
     correct = 0
     results = []
     
-    for i, (response, gt_answer) in enumerate(zip(responses, gt_answers)):
-        # Extract answer from response
-        is_correct = grade_answer(response, gt_answer, extract=True)
+    for i, (response, input_item) in enumerate(zip(responses, input_items)):
+        response_stripped = response.split("</think>")[-1].strip() # Only evaluate the response after the </think> tag
+        instruction_results = grade_instruction_following(input_item, response_stripped)
         
-        if is_correct:
+        if all(instruction_results.values()):
             correct += 1
         
         results.append({
-            "problem": questions[i],
-            "formatted_problem": formatted_problems[i],
-            "ground_truth": gt_answer,
+            "prompt": prompts[i],
+            "formatted_prompt": formatted_prompts[i],
+            "instruction_results": instruction_results,
             "raw_response": response,
-            "correct": is_correct,
+            "correct": all(instruction_results.values()),
         })
     
     accuracy = correct / len(results) if results else 0.0
@@ -93,3 +92,4 @@ def evaluate_gsm8k(
         "total": len(results),
         "samples": results[:log_n_results],
     }
+

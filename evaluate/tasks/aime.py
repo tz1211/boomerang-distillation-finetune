@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.tasks.utils import batch_generate, extract_answer_boxed, extract_number
+from evaluate.utils.utils import batch_generate, grade_answer
 
 
 def evaluate_aime(
@@ -47,7 +47,7 @@ def evaluate_aime(
     
     # Extract problems and answers
     problems = [item["problem"] for item in dataset]
-    ground_truth_answers = [int(item["answer"]) for item in dataset]
+    ground_truth_answers = [item["answer"] for item in dataset]
     
     print(f"Evaluating on {len(problems)} AIME problems...")
     
@@ -68,13 +68,7 @@ def evaluate_aime(
     
     for i, (response, gt_answer) in enumerate(zip(responses, ground_truth_answers)):
         # Extract answer from response
-        predicted_answer = extract_answer_boxed(response)
-        predicted_answer = extract_number(predicted_answer)
-        
-        # Check correctness 
-        is_correct = False
-        if predicted_answer:
-            is_correct = predicted_answer == gt_answer
+        is_correct = grade_answer(response, gt_answer, extract=True)
         
         if is_correct:
             correct += 1
@@ -84,7 +78,6 @@ def evaluate_aime(
             "formatted_problem": formatted_problems[i],
             "ground_truth": gt_answer,
             "raw_response": response,
-            "filtered_answer": predicted_answer,
             "correct": is_correct,
         })
     
