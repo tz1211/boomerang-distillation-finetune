@@ -225,3 +225,4 @@ models/
 stdout_logs/
 error_logs/
 fasrc/
+figs/
