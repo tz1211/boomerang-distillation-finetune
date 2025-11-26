@@ -1,6 +1,6 @@
 """
 Custom evaluation framework without lm_eval_harness.
-Supports: GSM8K, MATH500, AIME, MMLU
+Supports: AIME, GPQA, GSM8K, IF-EVAL, MATH500, MMLU
 """
 
 from __future__ import annotations
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tasks",
         required=True,
-        help="Comma-separated list of tasks: gsm8k,math500,aime,mmlu",
+        help="Comma-separated list of tasks: aime,gpqa,gsm8k,ifeval,math500,mmlu",
     )
     parser.add_argument(
         "--num_layers_to_patch",
