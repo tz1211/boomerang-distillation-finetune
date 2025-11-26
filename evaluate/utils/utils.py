@@ -12,9 +12,11 @@ Functions:
 """
 
 import sympy
+import signal
 import regex as re
 from typing import List, Optional
 from pylatexenc import latex2text
+from contextlib import contextmanager
 from sympy.parsing import sympy_parser
 
 from vllm import LLM, SamplingParams
@@ -30,6 +32,28 @@ import warnings
 BAD_SUBSTRINGS = ["^{", "^("]
 BAD_REGEXES = ["\^[0-9]+\^", "\^[0-9][0-9]+"]
 TUPLE_CHARS = "()[]"
+
+
+class TimeoutError(Exception):
+    """Custom timeout exception."""
+    pass
+
+@contextmanager
+def timeout(seconds):
+    """Context manager for timing out operations using SIGALRM."""
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+    
+    # Set the signal handler
+    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    except TimeoutError:
+        raise
+    finally:
+        signal.alarm(0)  # Cancel the alarm
+        signal.signal(signal.SIGALRM, old_handler)  # Restore old handler
 
 
 def _sympy_parse(expr: str):
@@ -53,7 +77,13 @@ def _parse_latex(expr: str) -> str:
     # Suppress pylatexenc warnings about unconfigured macros (frac is handled by math_normalize.py)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*macro.*failed its substitution.*")
-        expr = latex2text.LatexNodes2Text().latex_to_text(expr)
+        try:
+            with timeout(2):  # 2 second timeout for LaTeX parsing
+                expr = latex2text.LatexNodes2Text().latex_to_text(expr)
+        except TimeoutError:
+            # If LaTeX parsing hangs, print warning and return original expression
+            print(f"WARNING: LaTeX parsing timed out after 2 seconds for expression: {expr[:100]}...")
+            return expr.strip()
 
     # Replace the specific characters that this parser uses.
     expr = expr.replace("√", "sqrt")
@@ -223,9 +253,17 @@ def are_equal_under_sympy(ground_truth_normalized: str, given_normalized: str):
         expr = f"({ground_truth_normalized})-({given_normalized})"
         if should_allow_eval(expr):
             sympy_diff = _sympy_parse(expr)
-            simplified = sympy.simplify(sympy_diff)
-            if simplified == 0:
-                are_equal = True
+            try:
+                with timeout(5):  # 5 second timeout
+                    simplified = sympy.simplify(sympy_diff)
+                    if simplified == 0:
+                        are_equal = True
+            except TimeoutError:
+                # If sympy.simplify() hangs, print the expressions and return False
+                print(f"WARNING: sympy.simplify() timed out after 5 seconds")
+                print(f"  Ground truth: {ground_truth_normalized}")
+                print(f"  Given answer: {given_normalized}")
+                are_equal = False
     except:
         pass
     return are_equal
@@ -250,10 +288,50 @@ def split_tuple(expr: str):
     return elems
 
 
-def extract_last_boxed(text: str) -> str:
+def extra_extraction(response: str) -> str:
+    """
+    Extracts the final answer from a model response.
+    - Finds the last occurrence of 'final answer' (case-insensitive)
+    - Removes any trailing ':' or 'is'
+    - Removes any trailing punctuation or whitespace
+    - Removes any trailing <eos>, <end_of_turn>, <eom>, <end_of_message>,
+      <eot>, <end_of_sequence>, and anything following them.
+    """
+    if not response:
+        return ""
+
+    lower_resp = response.lower()
+    idx = lower_resp.rfind("final answer")
+    if idx == -1:
+        return ""
+
+    # Extract substring after 'final answer'
+    substring = response[idx + len("final answer"):]
+
+    # Remove optional ':' or 'is'
+    substring = re.sub(r"^\s*[:\-]?\s*(is\s*)?", "", substring, flags=re.IGNORECASE)
+
+    # Remove any trailing special tokens and everything after them
+    substring = re.sub(
+        r"\s*<\s*(end_of_turn|eom|end_of_message|eot|end_of_sequence|eos)\s*>.*$",
+        "",
+        substring,
+        flags=re.IGNORECASE,
+    )
+
+    # Trim trailing punctuation and whitespace
+    cleaned = substring.strip()
+    cleaned = re.sub(r"[.?!\s]+$", "", cleaned)
+
+    return cleaned.strip()
+
+
+def extract_last_boxed(text: str, added_answer_extraction=False) -> str:
     # Find the last occurrence of \boxed{
     start_index = text.rfind(r"\boxed{")
-    if start_index == -1:
+    if start_index == -1: # no boxed found, attempt added answer extraction
+        if added_answer_extraction:
+            return extra_extraction(text)
         return text
     # Move index to the character after '{'
     start_index += len(r"\boxed{")
@@ -274,7 +352,7 @@ def extract_last_boxed(text: str) -> str:
     return "".join(content).strip()
 
 
-def grade_answer(given_answer: str, ground_truth: str, extract=True) -> bool:
+def grade_answer(given_answer: str, ground_truth: str, extract=True, added_answer_extraction=False) -> bool:
     """
     The answer will be considered correct if:
     (a) it normalizes to the same string as the ground truth answer
@@ -284,7 +362,7 @@ def grade_answer(given_answer: str, ground_truth: str, extract=True) -> bool:
     if given_answer is None:
         return False
     if extract:
-        given_answer = extract_last_boxed(given_answer)
+        given_answer = extract_last_boxed(given_answer, added_answer_extraction=added_answer_extraction)
         ground_truth = extract_last_boxed(ground_truth)
 
     ground_truth_normalized_mathd = math_normalize.normalize_answer(ground_truth)
