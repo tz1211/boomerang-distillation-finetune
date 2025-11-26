@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.utils.utils import batch_generate, grade_answer
+from evaluate.utils.utils import batch_generate, grade_answer, extract_last_boxed
 
 
 def evaluate_gsm8k(
@@ -72,7 +72,8 @@ def evaluate_gsm8k(
     
     for i, (response, gt_answer) in enumerate(zip(responses, gt_answers)):
         # Extract answer from response
-        is_correct = grade_answer(response, gt_answer, extract=True)
+        is_correct = grade_answer(response, gt_answer, extract=True, added_answer_extraction=True)
+        extracted_answer = extract_last_boxed(response, added_answer_extraction=True)
         
         if is_correct:
             correct += 1
@@ -82,6 +83,7 @@ def evaluate_gsm8k(
             "formatted_problem": formatted_problems[i],
             "ground_truth": gt_answer,
             "raw_response": response,
+            "extracted_answer": extracted_answer.strip(),
             "correct": is_correct,
         })
     

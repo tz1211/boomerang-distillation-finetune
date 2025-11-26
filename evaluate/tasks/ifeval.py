@@ -81,6 +81,7 @@ def evaluate_ifeval(
             "formatted_prompt": formatted_prompts[i],
             "instruction_results": instruction_results,
             "raw_response": response,
+            "filtered_response": response_stripped,
             "correct": all(instruction_results.values()),
         })
     

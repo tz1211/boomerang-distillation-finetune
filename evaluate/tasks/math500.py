@@ -6,7 +6,7 @@ from vllm import LLM
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from evaluate.utils.utils import batch_generate, grade_answer
+from evaluate.utils.utils import batch_generate, grade_answer, extract_last_boxed
 
 
 def evaluate_math500(
@@ -63,7 +63,8 @@ def evaluate_math500(
     level_stats = {}
     
     for i, (response, gt_answer) in enumerate(zip(responses, gt_answers)):
-        is_correct = grade_answer(response, gt_answer, extract=True)
+        is_correct = grade_answer(response, gt_answer, extract=True, added_answer_extraction=True)
+        extracted_answer = extract_last_boxed(response, added_answer_extraction=True)
 
         # Update overall statistics
         if is_correct:
@@ -81,8 +82,9 @@ def evaluate_math500(
             "problem": problems[i],
             "formatted_problem": formatted_problems[i],
             "ground_truth": gt_answer,
-            "level": level,
             "raw_response": response,
+            "extracted_answer": extracted_answer.strip(),
+            "level": level,
             "correct": is_correct,
         })
     
