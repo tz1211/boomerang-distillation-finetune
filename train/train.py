@@ -304,7 +304,7 @@ def main():
 
     if args.report_to == "wandb":
         wandb.init(
-            project="boomerang-distillation",
+            project="boomerang-distillation-finetune",
             config=args.to_sanitized_dict(),
             dir=f"{args.save_directory}/wandb",
             settings=wandb.Settings(init_timeout=120),

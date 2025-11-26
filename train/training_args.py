@@ -4,11 +4,11 @@ from typing import Optional, Union
 from transformers import TrainingArguments as TA
 
 fsdp_config = {
-    "Qwen/Qwen3-4B-Base": {
+    "Qwen/Qwen3-4B": {
         "fsdp_transformer_layer_cls_to_wrap": ["Qwen3DecoderLayer"],
         "fsdp_sync_module_states": "false",
     },
-    "Qwen/Qwen3-8B-Base": {
+    "Qwen/Qwen3-8B": {
         "fsdp_transformer_layer_cls_to_wrap": ["Qwen3DecoderLayer"],
         "fsdp_sync_module_states": "false",
     },
