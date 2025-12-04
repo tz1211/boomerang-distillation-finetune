@@ -141,6 +141,7 @@ def main(
         gpu_memory_utilization=vllm_gpu_memory_utilization,
         dtype=str(dtype).replace("torch.", ""),
         trust_remote_code=True,
+        max_model_len=8192, # KV cache memory management
     )
     print("vLLM model loaded successfully!")
     
@@ -243,7 +244,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--patch_first_k_layers",
         action="store_true",
-        help="Patch student layers starting from first layers if true, last layers otherwise",
+        default=False,
+        help="Patch student layers starting from first layers (default: False)",
     )
     parser.add_argument(
         "--dtype",
@@ -253,11 +255,11 @@ if __name__ == "__main__":
         help="Data type for model weights",
     )
     parser.add_argument(
-        "--apply_chat_template",
-        type=bool,
+        "--no_apply_chat_template",
+        dest="apply_chat_template",
+        action="store_false",
         default=True,
-        required=False,
-        help="Apply chat template to prompts",
+        help="Do not apply chat template to prompts (default: True)",
     )
     parser.add_argument(
         "--max_new_tokens",
@@ -295,11 +297,11 @@ if __name__ == "__main__":
         help="GPU memory utilization for vLLM (default: 0.9)",
     )
     parser.add_argument(
-        "--use_system_prompts",
-        type=bool,
+        "--no_use_system_prompts",
+        dest="use_system_prompts",
+        action="store_false",
         default=True,
-        required=False,
-        help="Disable system prompts (system prompts are enabled by default from evaluate.system_prompts.SYSTEM_PROMPTS)",
+        help="Do not use system prompts (default: True)",
     )
     parser.add_argument(
         "--log_n_results",
