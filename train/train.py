@@ -1,4 +1,5 @@
 import argparse
+import os
 import gc
 import json
 from typing import Dict
@@ -9,7 +10,6 @@ try:
     import wandb
 except ImportError:
     pass
-from datasets import load_dataset
 from torch import nn
 from transformers import (
     AutoModelForCausalLM,
@@ -22,6 +22,7 @@ from transformers import (
 
 from patching.utils import cut_layers
 from train.data_args import DataArguments
+from train.dataset_router import prepare_dataset
 from train.model_args import ModelArguments
 from train.training_args import TrainingArguments
 
@@ -303,8 +304,10 @@ def main():
         set_seed(args.seed)
 
     if args.report_to == "wandb":
+        os.environ["WANDB_PROJECT"] = "boomerang-distillation-finetune"
         wandb.init(
             project="boomerang-distillation-finetune",
+            name = create_model_out_str(args),
             config=args.to_sanitized_dict(),
             dir=f"{args.save_directory}/wandb",
             settings=wandb.Settings(init_timeout=120),
@@ -346,29 +349,8 @@ def main():
 
     student_model.train()
 
-    train_dataset = load_dataset(
-        args.dataset,
-        split="train",
-        streaming=True,
-    )
-
-    test = train_dataset.take(512)
-    # Note: skipping the first 50k examples for reproducibility. This does not affect functionality.
-    train_dataset = train_dataset.skip(50000)
-
-    def tokenize_function(example):
-        return tokenizer(
-            example["text"],
-            truncation=True,
-            padding="max_length",
-            max_length=args.max_length,
-            return_special_tokens_mask=True,
-        )
-
-    tokenized_train = train_dataset.shuffle(buffer_size=100_000, seed=args.seed).map(
-        tokenize_function, batched=True
-    )
-    eval_dataset = test.map(tokenize_function, batched=True)
+    # Prepare datasets using dataset-specific pipeline
+    tokenized_train, eval_dataset = prepare_dataset(dataset_name=args.dataset, tokenizer=tokenizer, max_length=args.max_length, seed=args.seed)
 
     trainer = BoomerangDistillationTrainer(
         model=student_model,
